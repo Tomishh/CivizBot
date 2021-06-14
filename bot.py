@@ -13,24 +13,31 @@ slash = SlashCommand(client , sync_commands=True)
 async def on_ready():
     print("Bot Ready to use :3")
 
-options = [
-    {
-        "name": "start",
-        "description" : "Debut la limite du guess",
-        "required" : False,
-        "type" : 4
-    },
-    {
-        "name": "stop",
-        "description" : "Fin de la limite du guess",
-        "required" : False,
-        "type" : 4
-    }
-]
+# options = [
+#     {
+#         "name": "start",
+#         "description" : "Debut la limite du guess",
+#         "required" : False,
+#         "type" : 4
+#     },
+#     {
+#         "name": "stop",
+#         "description" : "Fin de la limite du guess",
+#         "required" : False,
+#         "type" : 4
+#     }
+# ]
 
-@slash.slash(name= 'Hi' , description='Dit bonjour')
+@slash.slash(name= 'prout' , description='ça fait prout')
 async def guess(ctx : SlashContext):
     await ctx.send("Bonjour")
+
+@slash.slash(name= "Hi", description="Pong comme on dit")
+async def tag(ctx : SlashContext):
+    id=ctx.message.author.id
+    tagged_id="<@%s>"% id
+    await ctx.send(tagged_id)
+
 
 
 client.run(token)
