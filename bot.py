@@ -30,7 +30,7 @@ async def on_ready():
 
 @slash.slash(description='ça fait prout')
 async def hi(ctx : SlashContext):
-    await ctx.send("Bonjour")
+    await ctx.send("Bonjour ")
 
 @slash.slash(description="Show latency")
 async def ping(ctx : SlashContext):
