@@ -28,15 +28,17 @@ async def on_ready():
 #     }
 # ]
 
-@slash.slash(name= 'prout' , description='ça fait prout')
-async def guess(ctx : SlashContext):
+@slash.slash(description='ça fait prout')
+async def hi(ctx : SlashContext):
     await ctx.send("Bonjour")
 
-@slash.slash(name= "Hi", description="Pong comme on dit")
-async def tag(ctx : SlashContext):
-    id=ctx.message.author.id
-    tagged_id="<@%s>"% id
-    await ctx.send(tagged_id)
+@slash.slash(description="Show latency")
+async def ping(ctx : SlashContext):
+    await ctx.send(f"Bot speed : {round(client.latency *1000)}ms")
+
+@slash.slash(description="Pong comme on dit")
+async def test(ctx : SlashContext):
+    await ctx.send(f"<@{ctx.author_id}>")
 
 
 
