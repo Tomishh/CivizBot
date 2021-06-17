@@ -4,13 +4,20 @@ from discord.ext import commands
 from discord.flags import Intents
 from discord_slash import SlashCommand, SlashCommandOptionType , SlashContext
 import mysql.connector
+import csv
 
-mydb = mysql.connector.connect(
-host="localhost",
-user="root",
-password="m$7a3!W3saC2h@%C8saK",
-database="discord_bot",
-)
+list=[]
+
+with open('ConnectionString.csv','r') as csv_file:
+    reader = csv.reader(csv_file)
+    for row in reader :
+        list.append(row)
+    mydb = mysql.connector.connect(
+    host=list[0][0],
+    user=list[1][0],
+    password=list[2][0],
+    database=list[3][0],
+    )
 
 token_file= open("token.txt","r") #create a txt file with the discord bot token inside
 token= token_file.read()
