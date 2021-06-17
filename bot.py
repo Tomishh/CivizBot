@@ -5,6 +5,7 @@ from discord.flags import Intents
 from discord_slash import SlashCommand, SlashCommandOptionType , SlashContext
 import mysql.connector
 import csv
+import time
 
 list=[]
 
@@ -54,12 +55,20 @@ async def on_member_join(member):
 @client.event
 async def on_message(message):
     if not message.author.bot:
-        print(f"message send by {message.author}")
         cur=mydb.cursor()
-        query=f"update player set XP =(SELECT XP WHERE ID_Discord='{message.author.id}')+10 where ID_Discord='{message.author.id}'"
-        cur.execute(query)
-        mydb.commit()
-        print(f"{message.author} XP added")
+        query_timestamp=f"select last_message from player where ID_Discord = {message.author.id}"
+        cur.execute(query_timestamp)
+        last_message=cur.fetchall()
+        last_message_delay=last_message[0][0]+20
+        actual_time=int(time.time())
+        print(f"message send by {message.author}")
+        if last_message_delay<actual_time:
+            query_addxp=f"update player set XP =(SELECT XP WHERE ID_Discord='{message.author.id}')+10, last_message='{actual_time}' where ID_Discord='{message.author.id}'"
+            cur.execute(query_addxp)
+            print(f"{message.author} XP added and last_message updated")
+            mydb.commit()
+        else:
+            print("Message sended too early to add XP")
 
 
 
