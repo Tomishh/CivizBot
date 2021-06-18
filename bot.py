@@ -28,6 +28,8 @@ intents = discord.Intents.all()
 client = commands.Bot(command_prefix='!',intents=intents)
 slash = SlashCommand(client , sync_commands=True)
 
+guild_ids = [543518985145024522] 
+
 def progress_bar(n):
     full="█"
     empty="░"
@@ -125,19 +127,19 @@ async def on_message(message):
 
 
 @slash.slash(description='ça fait prout')
-async def hi(ctx : SlashContext):
-    await ctx.send("Bonjour ")
+async def hi(ctx : SlashContext, guild_ids=guild_ids):
+    await ctx.send("Bonjour mon reuf 3")
 
 @slash.slash(description="Show latency")
-async def ping(ctx : SlashContext):
+async def ping(ctx : SlashContext, guild_ids=guild_ids):
     await ctx.send(f"Bot speed : {round(client.latency *1000)}ms")
 
 @slash.slash(description="Pong comme on dit")
-async def test(ctx : SlashContext):
+async def test(ctx : SlashContext, guild_ids=guild_ids):
     await ctx.send(f"Wsh wsh wsh <@{ctx.author_id}>")
 
 @slash.slash(description="Ajoute ton ID discord à la BDD")
-async def add(ctx : SlashContext):
+async def add(ctx : SlashContext,guild_ids=guild_ids):
     cur=mydb.cursor()
     s="INSERT INTO player (ID_DISCORD,Money,XP) VALUES (%s,%s,%s)"
     b1=(ctx.author_id,2,3)
@@ -146,12 +148,11 @@ async def add(ctx : SlashContext):
     await ctx.send(f"C'est bon chacal <@{ctx.author_id}>")
 
 @slash.slash(description="Montre ton XP")
-async def level(ctx : SlashContext):
+async def level(ctx : SlashContext, guild_ids=guild_ids):
     cur=mydb.cursor()
     s=f"select level,XP from player where ID_Discord={ctx.author_id}"
     cur.execute(s)
     value=cur.fetchall()
-    cur.commit()
     level=value[0][0]
     XP_player=value[0][1]
     XP_needed = get_level_xp(level)-XP_player
@@ -160,8 +161,7 @@ async def level(ctx : SlashContext):
     XP_player_10 = ((10*XP_needed)/level_xp)
     int_xp_10=int(XP_player_10)
     XP_progress = level_xp-XP_needed
-    await ctx.send(f"{XP_progress}/{level_xp}")
-    await ctx.send(progress_bar(int_xp_10))
+    await ctx.send(f"Niveau : {level}   {progress_bar(int_xp_10)}  {XP_progress}/{level_xp}")
     
 
 
