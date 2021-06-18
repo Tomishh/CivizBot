@@ -1,6 +1,8 @@
 from asyncio.windows_events import NULL
+from configparser import DEFAULTSECT
 from inspect import getfullargspec
 import discord
+from discord import embeds
 from discord.ext import commands
 from discord.flags import Intents
 from discord_slash import SlashCommand, SlashCommandOptionType , SlashContext
@@ -30,11 +32,11 @@ slash = SlashCommand(client , sync_commands=True)
 
 guild_ids = [543518985145024522] 
 
-def progress_bar(n):
+def progress_bar(n,a):
     full="█"
     empty="░"
     string=""
-    for i in range(10-n):
+    for i in range(a-n):
         string=f"{string}{full}"
     for j in range(n):
         string=f"{string}{empty}"
@@ -42,6 +44,10 @@ def progress_bar(n):
 
 def get_level_xp(level):
     return (5*(level*level)+(50*level)+100)
+
+def get_pourcentage(n,a,b):
+    value = ((n*a)/b)
+    return int(value)
 
 @client.event
 async def on_ready():
@@ -83,7 +89,7 @@ async def on_message(message):
         player_level=cur.fetchall()
         if last_message_delay<actual_time:
             #   AJOUT DE L'XP ET DE L'ARGENT
-            query_addxp=f"update player set XP =(SELECT XP WHERE ID_Discord='{message.author.id}')+5, last_message='{actual_time}' where ID_Discord='{message.author.id}'"
+            query_addxp=f"update player set XP =(SELECT XP WHERE ID_Discord='{message.author.id}')+3, last_message='{actual_time}' where ID_Discord='{message.author.id}'"
             cur.execute(query_addxp)
             print(f"{message.author} XP added and last_message updated\n")
             mydb.commit()
@@ -158,10 +164,25 @@ async def level(ctx : SlashContext, guild_ids=guild_ids):
     XP_needed = get_level_xp(level)-XP_player
     level_xp=get_level_xp(level)-get_level_xp(level-1)
     #arrondir de [0;10] la progression d'XP
-    XP_player_10 = ((10*XP_needed)/level_xp)
-    int_xp_10=int(XP_player_10)
+    
+    
     XP_progress = level_xp-XP_needed
-    await ctx.send(f"Niveau : {level}   {progress_bar(int_xp_10)}  {XP_progress}/{level_xp}")
+    embed=discord.Embed(
+        title=f'XP de {ctx.author}',
+        colour = discord.Colour.red(),
+    )
+    print(ctx.author.avatar_url)
+    embed.set_footer(text='Support : Tomish#3832')
+    embed.set_author(name="Civiz Bot",icon_url="https://cdn.discordapp.com/avatars/854067274892967937/31c3d848d1796a79083c1acf95475ee0.webp?size=128")
+    embed.set_thumbnail(url=ctx.author.avatar_url)
+    embed.add_field(name=f"Niveau : {level}",value=f"XP : {XP_progress}/{level_xp}", inline=True)
+    embed.add_field(name="Rank : ",value='Soon...', inline=True)
+    embed.add_field(name="Progression :",value=f"{progress_bar(get_pourcentage(20,XP_needed,level_xp),20)}  -  {100-get_pourcentage(100,XP_needed,level_xp)}%", inline=False)
+    await ctx.send(embed=embed)
+
+
+
+    
     
 
 
