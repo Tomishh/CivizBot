@@ -32,12 +32,14 @@ def progress_bar(n):
     full="█"
     empty="░"
     string=""
-    for i in range(n):
+    for i in range(10-n):
         string=f"{string}{full}"
-    for j in range(10-n):
+    for j in range(n):
         string=f"{string}{empty}"
     return string
 
+def get_level_xp(level):
+    return (5*(level*level)+(50*level)+100)
 
 @client.event
 async def on_ready():
@@ -149,13 +151,18 @@ async def level(ctx : SlashContext):
     s=f"select level,XP from player where ID_Discord={ctx.author_id}"
     cur.execute(s)
     value=cur.fetchall()
-    XP_player=value[0][1]
+    cur.commit()
     level=value[0][0]
-    XP_for_lvl_up = (5*(level*level)+(50*level)+100)
-    XP_needed = XP_for_lvl_up-XP_player
-    XP_player_10 = ((10*XP_needed)/XP_for_lvl_up)
+    XP_player=value[0][1]
+    XP_needed = get_level_xp(level)-XP_player
+    level_xp=get_level_xp(level)-get_level_xp(level-1)
+    #arrondir de [0;10] la progression d'XP
+    XP_player_10 = ((10*XP_needed)/level_xp)
     int_xp_10=int(XP_player_10)
-    print(progress_bar(int_xp_10))
+    XP_progress = level_xp-XP_needed
+    await ctx.send(f"{XP_progress}/{level_xp}")
+    await ctx.send(progress_bar(int_xp_10))
+    
 
 
 
