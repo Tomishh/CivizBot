@@ -113,25 +113,6 @@ async def on_message(message):
 
 
 
-
-# # options = [
-# #     {
-# #         "name": "start",
-# #         "description" : "Debut la limite du guess",
-# #         "required" : False,
-# #         "type" : 4
-# #     },
-# #     {a
-
-# #         "name": "stop",
-# #         "description" : "Fin de la limite du guess",
-# #         "required" : False,
-# #         "type" : 4
-# #     }
-# # ]
-
-
-
 @slash.slash(description='ça fait prout')
 async def hi(ctx : SlashContext, guild_ids=guild_ids):
     await ctx.send("Bonjour mon reuf 3")
@@ -144,14 +125,14 @@ async def ping(ctx : SlashContext, guild_ids=guild_ids):
 async def test(ctx : SlashContext, guild_ids=guild_ids):
     await ctx.send(f"Wsh wsh wsh <@{ctx.author_id}>")
 
-@slash.slash(description="Ajoute ton ID discord à la BDD")
-async def add(ctx : SlashContext,guild_ids=guild_ids):
-    cur=mydb.cursor()
-    s="INSERT INTO player (ID_DISCORD,Money,XP) VALUES (%s,%s,%s)"
-    b1=(ctx.author_id,2,3)
-    cur.execute(s,b1)
-    mydb.commit()
-    await ctx.send(f"C'est bon chacal <@{ctx.author_id}>")
+# @slash.slash(description="Ajoute ton ID discord à la BDD")
+# async def add(ctx : SlashContext,guild_ids=guild_ids):
+#     cur=mydb.cursor()
+#     s="INSERT INTO player (ID_DISCORD,Money,XP) VALUES (%s,%s,%s)"
+#     b1=(ctx.author_id,2,3)
+#     cur.execute(s,b1)
+#     mydb.commit()
+#     await ctx.send(f"C'est bon chacal <@{ctx.author_id}>")
 
 @slash.slash(description="Montre ton XP")
 async def level(ctx : SlashContext, guild_ids=guild_ids):
@@ -181,6 +162,44 @@ async def level(ctx : SlashContext, guild_ids=guild_ids):
     await ctx.send(embed=embed)
 
 
+
+@slash.slash(name="add",description="Ajout de l'experience", options=[
+{
+    "name": "user",
+    "description": "Sélectionne l'utilisateur à qui ajouter de l'expérience",
+    "type": 6,
+    "required": "true"
+    },
+    {
+    "name": "xp",
+    "description": "Saisir le montant d'expérience à ajouter",
+    "type": 4,
+    "required": "true"
+    },
+    ]
+)
+async def add(ctx : SlashContext,user,xp, guild_ids=guild_ids):
+    cur=mydb.cursor()
+    query_add_xp=f"update player set XP = (SELECT XP WHERE ID_Discord='{user.id}')+{xp} where ID_Discord = {user.id}"
+    print(query_add_xp)
+    cur.execute(query_add_xp)
+    mydb.commit()
+    query_new_xp=f"SELECT XP from PLAYER where ID_Discord = {user.id}"
+    cur.execute(query_new_xp)
+    new_xp=cur.fetchall()
+    
+    variable = True
+    query_get_level = f"select level from player where ID_Discord = {user.id}"
+    while variable == True:
+        cur.execute(query_get_level)
+        level_actual=cur.fetchall()
+        if new_xp[0][0] > get_level_xp(level_actual[0][0]):
+            query_levelup= f"update player set level =(SELECT level WHERE ID_Discord='{user.id}')+1 where ID_Discord='{user.id}'"
+            cur.execute(query_levelup)
+            mydb.commit()
+        else :
+            variable=False
+    await ctx.send(f"Ajout de {xp} XP à {user}, XP Total du joueur : {new_xp[0][0]} XP. Niveau mis à jour")
 
     
     
