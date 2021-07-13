@@ -6,6 +6,7 @@ from discord import embeds
 from discord.ext import commands
 from discord.flags import Intents
 from discord_slash import SlashCommand, SlashCommandOptionType , SlashContext
+from discord_slash.utils.manage_commands import create_option, create_choice
 import mysql.connector
 import csv
 import time
@@ -32,6 +33,34 @@ slash = SlashCommand(client , sync_commands=True)
 
 guild_ids = [543518985145024522] 
 
+def get_player_level(user):
+    cur=mydb.cursor()
+    query_level = f"SELECT level from player WHERE ID_Discord='{user}'"
+    cur.execute(query_level)
+    player_level=cur.fetchall()
+    return player_level[0][0]
+
+def get_player_xp(user):
+    cur=mydb.cursor()
+    query_xp = f"SELECT XP from player WHERE ID_Discord='{user}'"
+    cur.execute(query_xp)
+    player_xp=cur.fetchall()
+    return player_xp[0][0]
+
+def get_player_last_message(user):
+    cur=mydb.cursor()
+    query_timestamp=f"select last_message from player where ID_Discord = {user}"
+    cur.execute(query_timestamp)
+    last_message=cur.fetchall()
+    return last_message[0][0]
+
+def get_level_xp(level):
+    return (5*(level*level)+(50*level)+100)
+
+def get_pourcentage(n,a,b):
+    value = ((n*a)/b)
+    return int(value)
+
 def progress_bar(n,a):
     full="█"
     empty="░"
@@ -42,18 +71,11 @@ def progress_bar(n,a):
         string=f"{string}{empty}"
     return string
 
-def get_level_xp(level):
-    return (5*(level*level)+(50*level)+100)
-
-def get_pourcentage(n,a,b):
-    value = ((n*a)/b)
-    return int(value)
-
 @client.event
 async def on_ready():
     print("Bot Ready to use")
     activity = discord.Game(name="Fais / pour effectuer des commandes", type=3)
-    await client.change_presence(status=discord.Status.idle, activity=activity)
+    
 
 @client.event
 async def on_member_join(member):
@@ -64,7 +86,7 @@ async def on_member_join(member):
     discord_id = cur.fetchall()
     print(discord_id)
     if discord_id == []:
-        query=f"insert into player (ID_Discord,Money,XP,last_message) VALUES ('{member.id}','0','0','0')"
+        query=f"insert into player (ID_Discord,Money,XP,last_message,level) VALUES ('{member.id}','0','0','0','1')"
         cursor=mydb.cursor()
         cursor.execute(query)
         mydb.commit()
@@ -77,64 +99,54 @@ async def on_member_join(member):
 @client.event
 async def on_message(message):
     if not message.author.bot:
-        cur=mydb.cursor()
-        query_timestamp=f"select last_message from player where ID_Discord = {message.author.id}"
-        cur.execute(query_timestamp)
-        last_message=cur.fetchall()
-        last_message_delay=last_message[0][0]+3
+        last_message_delay=get_player_last_message(message.author.id)+20
         actual_time=int(time.time())
-        print(f"message send by {message.author}")
-        query_getplayerlevel = f"select level from player where ID_Discord = {message.author.id}"
-        cur.execute(query_getplayerlevel)
-        player_level=cur.fetchall()
-        if last_message_delay<actual_time:
-            #   AJOUT DE L'XP ET DE L'ARGENT
-            query_addxp=f"update player set XP =(SELECT XP WHERE ID_Discord='{message.author.id}')+3, last_message='{actual_time}' where ID_Discord='{message.author.id}'"
+        if last_message_delay<actual_time: #   AJOUT DE L'XP ET DE L'ARGENT
+            cur=mydb.cursor()
+            query_addxp=f"update player set XP ={get_player_xp(message.author.id)+3}, last_message='{actual_time}' where ID_Discord='{message.author.id}'"
             cur.execute(query_addxp)
-            print(f"{message.author} XP added and last_message updated\n")
+            print(f"{message.author} XP added and last_message updated")
             mydb.commit()
-            query_get_player_xp = f"SELECT XP from player WHERE ID_Discord='{message.author.id}'"
-            cur.execute(query_get_player_xp)
-            player_xp=cur.fetchall()
-            query_get_player_level = f"SELECT level from player WHERE ID_Discord='{message.author.id}'"
-            cur.execute(query_get_player_level)
-            player_level_temp=cur.fetchall()
-            player_level=player_level_temp[0][0]
-            needed_xp = (5*(player_level*player_level)+(50*player_level)+100)
-            if player_xp[0][0] > needed_xp:
+            needed_xp = (5*(get_player_level(message.author.id)**2)+(50*get_player_level(message.author.id))+100)
+            if get_player_xp(message.author.id) > needed_xp:
+                await message.channel.send(f"<@{message.author.id}> a Level-up ! Tu es passé niveau {get_player_level(message.author.id)+1}")
                 query_levelup= f"update player set level =(SELECT level WHERE ID_Discord='{message.author.id}')+1 where ID_Discord='{message.author.id}'"
                 cur.execute(query_levelup)
                 mydb.commit()
-                player_level_add = player_level + 1
-                await message.channel.send(f"<@{message.author.id}> a Level-up ! Tu es passé niveau {player_level_add}")
+                
                 print(f"{message.author} level up !")
         else:
-            print("Message sended too early to add XP")
+            print(f"Message sended too early by {message.author} to add XP")
 
 
 
-@slash.slash(description='ça fait prout')
+@slash.slash(guild_ids=guild_ids,description='ça fait prout')
 async def hi(ctx : SlashContext, guild_ids=guild_ids):
     await ctx.send("Bonjour mon reuf 3")
 
-@slash.slash(description="Show latency")
+@slash.slash(guild_ids=guild_ids,description="Show latency")
 async def ping(ctx : SlashContext, guild_ids=guild_ids):
     await ctx.send(f"Bot speed : {round(client.latency *1000)}ms")
 
-@slash.slash(description="Pong comme on dit")
-async def test(ctx : SlashContext, guild_ids=guild_ids):
+@slash.slash(guild_ids=guild_ids,description="Pong comme on dit")
+async def test2(ctx : SlashContext, guild_ids=guild_ids):
     await ctx.send(f"Wsh wsh wsh <@{ctx.author_id}>")
 
-# @slash.slash(description="Ajoute ton ID discord à la BDD")
-# async def add(ctx : SlashContext,guild_ids=guild_ids):
-#     cur=mydb.cursor()
-#     s="INSERT INTO player (ID_DISCORD,Money,XP) VALUES (%s,%s,%s)"
-#     b1=(ctx.author_id,2,3)
-#     cur.execute(s,b1)
-#     mydb.commit()
-#     await ctx.send(f"C'est bon chacal <@{ctx.author_id}>")
+@slash.slash(guild_ids=guild_ids,name="useraddDB", description="ajoute utilisateur a la bdd", options=[
+{   "name": "user",
+    "description": "Sélectionne l'utilisateur à ajouter à la BDD",
+    "type": 6,
+    "required": "true"
+    },])
+async def useraddDB(ctx : SlashContext,user, guild_ids=guild_ids):
+    cur=mydb.cursor()
+    query_add_user=f"insert into player (ID_Discord,Money,XP,last_message,Level) VALUES ('{user.id}','0','0','0','1')"
+    cur.execute(query_add_user)
+    mydb.commit()
+    print(f"{user.id} added to DB")
+    await ctx.send(f"User : {user} added to DataBase")
 
-@slash.slash(description="Montre ton XP")
+@slash.slash(guild_ids=guild_ids,description="Montre ton XP")
 async def level(ctx : SlashContext, guild_ids=guild_ids):
     cur=mydb.cursor()
     s=f"select level,XP from player where ID_Discord={ctx.author_id}"
@@ -146,13 +158,11 @@ async def level(ctx : SlashContext, guild_ids=guild_ids):
     level_xp=get_level_xp(level)-get_level_xp(level-1)
     #arrondir de [0;10] la progression d'XP
     
-    
     XP_progress = level_xp-XP_needed
     embed=discord.Embed(
         title=f'XP de {ctx.author}',
         colour = discord.Colour.red(),
     )
-    print(ctx.author.avatar_url)
     embed.set_footer(text='Support : Tomish#3832')
     embed.set_author(name="Civiz Bot",icon_url="https://cdn.discordapp.com/avatars/854067274892967937/31c3d848d1796a79083c1acf95475ee0.webp?size=128")
     embed.set_thumbnail(url=ctx.author.avatar_url)
@@ -163,7 +173,7 @@ async def level(ctx : SlashContext, guild_ids=guild_ids):
 
 
 
-@slash.slash(name="add",description="Ajout de l'experience", options=[
+@slash.slash(guild_ids=guild_ids,name="addxp",description="Ajout de l'experience", options=[
 {
     "name": "user",
     "description": "Sélectionne l'utilisateur à qui ajouter de l'expérience",
@@ -178,7 +188,7 @@ async def level(ctx : SlashContext, guild_ids=guild_ids):
     },
     ]
 )
-async def add(ctx : SlashContext,user,xp, guild_ids=guild_ids):
+async def addxp(ctx : SlashContext,user,xp):
     cur=mydb.cursor()
     query_add_xp=f"update player set XP = (SELECT XP WHERE ID_Discord='{user.id}')+{xp} where ID_Discord = {user.id}"
     print(query_add_xp)
@@ -201,9 +211,98 @@ async def add(ctx : SlashContext,user,xp, guild_ids=guild_ids):
             variable=False
     await ctx.send(f"Ajout de {xp} XP à {user}, XP Total du joueur : {new_xp[0][0]} XP. Niveau mis à jour")
 
-    
-    
 
+@slash.slash(guild_ids=guild_ids,name="addlevel",description="Ajout des niveaux", options=[
+{
+    "name": "user",
+    "description": "Sélectionne l'utilisateur à qui ajouter de l'expérience",
+    "type": 6,
+    "required": "true"
+    },
+    {
+    "name": "level",
+    "description": "Saisir le nombres de niveaux à ajouter",
+    "type": 4,
+    "required": "true"
+    },
+    ]
+)
+async def addlevel(ctx : SlashContext,user,level):
+    cur=mydb.cursor()
+    query_add_level=f"update player set level = {get_player_level(user.id)+level} where ID_Discord = {user.id}"
+    query_add_xp=f"update player set xp={get_level_xp(get_player_level(user.id)+level-1)} where ID_Discord = {user.id}"
+    await ctx.send(f"{user} is now level {get_player_level(user.id)+level}")
+    cur.execute(query_add_xp)
+    cur.execute(query_add_level)
+    mydb.commit()
 
+@slash.slash(name="add",description="Add something to someone", guild_ids=guild_ids, options=[
+        create_option(
+            name="element",
+            description="Choisir l'élément à ajouter",
+            option_type=3,
+            required=True,
+            choices=[
+                create_choice(
+                    name="XP",
+                    value="XP",
+                ),
+                create_choice(
+                    name="Argent",
+                    value="Argent",
+                ),
+                create_choice(
+                    name="Level",
+                    value="Level",
+                ),
+            ]
+        ),
+        create_option(
+            name="user",
+            description="Choisir l'utilisateur à qui ajouter le montant",
+            option_type=6,
+            required=True
+        ),
+        create_option(
+            name="montant",
+            description="Choisir le montant à ajouter",
+            option_type=4,
+            required=True,
+        )
+    ]
+)
+async def add(ctx : SlashContext,element,user,montant):
+    print(element)
+    if element=="XP":
+        cur=mydb.cursor()
+        query_add_xp=f"update player set XP = (SELECT XP WHERE ID_Discord='{user.id}')+{montant} where ID_Discord = {user.id}"
+        print(query_add_xp)
+        cur.execute(query_add_xp)
+        mydb.commit()
+        query_new_xp=f"SELECT XP from PLAYER where ID_Discord = {user.id}"
+        cur.execute(query_new_xp)
+        new_xp=cur.fetchall()
+    
+        variable = True
+        query_get_level = f"select level from player where ID_Discord = {user.id}"
+        while variable == True:
+            cur.execute(query_get_level)
+            level_actual=cur.fetchall()
+            if new_xp[0][0] > get_level_xp(level_actual[0][0]):
+                query_levelup= f"update player set level =(SELECT level WHERE ID_Discord='{user.id}')+1 where ID_Discord='{user.id}'"
+                cur.execute(query_levelup)
+                mydb.commit()
+            else :
+                variable=False
+        await ctx.send(f"Ajout de {montant} XP à {user}, XP Total du joueur : {new_xp[0][0]} XP. Niveau mis à jour")
+
+    if element=="niveau":
+        cur=mydb.cursor()
+        query_add_level=f"update player set level = {get_player_level(user.id)+montant} where ID_Discord = {user.id}"
+        query_add_xp=f"update player set xp={get_level_xp(get_player_level(user.id)+montant-1)} where ID_Discord = {user.id}"
+        await ctx.send(f"{user} is now level {get_player_level(user.id)+montant}")
+        cur.execute(query_add_xp)
+        cur.execute(query_add_level)
+        mydb.commit()
 
 client.run(token)
