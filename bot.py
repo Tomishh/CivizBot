@@ -54,6 +54,13 @@ def get_player_last_message(user):
     last_message=cur.fetchall()
     return last_message[0][0]
 
+def get_player_money(user):
+    cur=mydb.cursor()
+    query_timestamp=f"select money from player where ID_Discord = {user}"
+    cur.execute(query_timestamp)
+    money=cur.fetchall()
+    return money[0][0]
+
 def get_level_xp(level):
     return (5*(level*level)+(50*level)+100)
 
@@ -103,7 +110,7 @@ async def on_message(message):
         actual_time=int(time.time())
         if last_message_delay<actual_time: #   AJOUT DE L'XP ET DE L'ARGENT
             cur=mydb.cursor()
-            query_addxp=f"update player set XP ={get_player_xp(message.author.id)+3}, last_message='{actual_time}' where ID_Discord='{message.author.id}'"
+            query_addxp=f"update player set XP ={get_player_xp(message.author.id)+3},money='{get_player_money(message.author.id)+5}', last_message='{actual_time}' where ID_Discord='{message.author.id}'"
             cur.execute(query_addxp)
             print(f"{message.author} XP added and last_message updated")
             mydb.commit()
@@ -168,7 +175,7 @@ async def level(ctx : SlashContext, guild_ids=guild_ids):
     embed.set_thumbnail(url=ctx.author.avatar_url)
     embed.add_field(name=f"Niveau : {level}",value=f"XP : {XP_progress}/{level_xp}", inline=True)
     embed.add_field(name="Rank : ",value='Soon...', inline=True)
-    embed.add_field(name="Progression :",value=f"{progress_bar(get_pourcentage(20,XP_needed,level_xp),20)}  -  {100-get_pourcentage(100,XP_needed,level_xp)}%", inline=False)
+    embed.add_field(name="Progression :",value=f"{progress_bar(get_pourcentage(20,XP_needed,level_xp),20)}   {100-get_pourcentage(100,XP_needed,level_xp)}%", inline=False)
     await ctx.send(embed=embed)
 
 
@@ -296,13 +303,41 @@ async def add(ctx : SlashContext,element,user,montant):
                 variable=False
         await ctx.send(f"Ajout de {montant} XP à {user}, XP Total du joueur : {new_xp[0][0]} XP. Niveau mis à jour")
 
-    if element=="niveau":
+    if element=="Level":
         cur=mydb.cursor()
-        query_add_level=f"update player set level = {get_player_level(user.id)+montant} where ID_Discord = {user.id}"
-        query_add_xp=f"update player set xp={get_level_xp(get_player_level(user.id)+montant-1)} where ID_Discord = {user.id}"
+        query_add_level=f"update player set level = {get_player_level(user.id)+montant}, xp={get_level_xp(get_player_level(user.id)+montant-1)} where ID_Discord = {user.id}"
         await ctx.send(f"{user} is now level {get_player_level(user.id)+montant}")
-        cur.execute(query_add_xp)
         cur.execute(query_add_level)
         mydb.commit()
+
+@slash.slash(guild_ids=guild_ids, name='balance', options=[
+    create_option(
+        name='user',
+        required=False,
+        option_type=6,
+        description="Choisir l'utilisateur à qui visualiser le port-feuille",
+        )
+    ]
+)
+async def balance(ctx : SlashContext,user):
+    if user==NULL:
+        embed=discord.Embed(
+        title=f'Argent de {ctx.author}',
+        colour = discord.Colour.green(),
+        )
+        embed.set_footer(text="/baltop pour voir le classement d'argent")
+        embed.set_author(name="Civiz Trading Bot",icon_url="https://cdn.discordapp.com/avatars/854067274892967937/31c3d848d1796a79083c1acf95475ee0.webp?size=128")
+        embed.set_thumbnail(url=ctx.author.avatar_url)
+        embed.add_field(name=f"Seuil du port-monnaie : ",value=f"{get_player_money(ctx.author.id)}", inline=True)
+    else :
+        embed=discord.Embed(
+        title=f'Argent de {user}',
+        colour = discord.Colour.green(),
+        )
+        embed.set_footer(text="/baltop pour voir le classement d'argent")
+        embed.set_author(name="Civiz Trading Bot",icon_url="https://cdn.discordapp.com/avatars/854067274892967937/31c3d848d1796a79083c1acf95475ee0.webp?size=128")
+        embed.set_thumbnail(url=ctx.author.avatar_url)
+        embed.add_field(name=f"Seuil du port-monnaie : ",value=f"{get_player_money(ctx.author.id)}", inline=True)
+    await ctx.send(embed=embed)
 
 client.run(token)
