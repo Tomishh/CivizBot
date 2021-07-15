@@ -11,6 +11,7 @@ import mysql.connector
 import csv
 import time
 
+
 list=[]
 
 with open('ConnectionString.csv','r') as csv_file:
@@ -153,26 +154,43 @@ async def useraddDB(ctx : SlashContext,user, guild_ids=guild_ids):
     print(f"{user.id} added to DB")
     await ctx.send(f"User : {user} added to DataBase")
 
-@slash.slash(guild_ids=guild_ids,description="Montre ton XP")
-async def level(ctx : SlashContext, guild_ids=guild_ids):
-    cur=mydb.cursor()
-    s=f"select level,XP from player where ID_Discord={ctx.author_id}"
-    cur.execute(s)
-    value=cur.fetchall()
-    level=value[0][0]
-    XP_player=value[0][1]
-    XP_needed = get_level_xp(level)-XP_player
-    level_xp=get_level_xp(level)-get_level_xp(level-1)
-    #arrondir de [0;10] la progression d'XP
+@slash.slash(guild_ids=guild_ids,description="Montre ton XP",options=[
+    create_option(
+        name="user",
+        description="Voir le niveau d'un utilisateur",
+        option_type=6,
+        required=False,
+        )
+    ]
+)
+async def level(ctx : SlashContext,user=NULL):
+    if user!=NULL:
+        level=get_player_level(user.id)
+        XP_player=get_player_xp(user.id)
+        XP_needed = get_level_xp(level)-XP_player
+        level_xp=get_level_xp(level)-get_level_xp(level-1)
+        XP_progress = level_xp-XP_needed
+        embed=discord.Embed(
+            title=f'XP de {user}',
+            colour = discord.Colour.red(),
+        )
+        embed.set_thumbnail(url=user.avatar_url)
     
-    XP_progress = level_xp-XP_needed
-    embed=discord.Embed(
-        title=f'XP de {ctx.author}',
-        colour = discord.Colour.red(),
-    )
+    if user==NULL:
+        level=get_player_level(ctx.author.id)
+        XP_player=get_player_xp(ctx.author.id)
+        XP_needed = get_level_xp(level)-XP_player
+        level_xp=get_level_xp(level)-get_level_xp(level-1)
+        XP_progress = level_xp-XP_needed
+        embed=discord.Embed(
+            title=f'XP de {ctx.author}',
+            colour = discord.Colour.red(),
+        )
+        embed.set_thumbnail(url=ctx.author.avatar_url)
+
     embed.set_footer(text='Support : Tomish#3832')
     embed.set_author(name="Civiz Bot",icon_url="https://cdn.discordapp.com/avatars/854067274892967937/31c3d848d1796a79083c1acf95475ee0.webp?size=128")
-    embed.set_thumbnail(url=ctx.author.avatar_url)
+
     embed.add_field(name=f"Niveau : {level}",value=f"XP : {XP_progress}/{level_xp}", inline=True)
     embed.add_field(name="Rank : ",value='Soon...', inline=True)
     embed.add_field(name="Progression :",value=f"{progress_bar(get_pourcentage(20,XP_needed,level_xp),20)}   {100-get_pourcentage(100,XP_needed,level_xp)}%", inline=False)
@@ -180,68 +198,6 @@ async def level(ctx : SlashContext, guild_ids=guild_ids):
 
 
 
-@slash.slash(guild_ids=guild_ids,name="addxp",description="Ajout de l'experience", options=[
-{
-    "name": "user",
-    "description": "Sélectionne l'utilisateur à qui ajouter de l'expérience",
-    "type": 6,
-    "required": "true"
-    },
-    {
-    "name": "xp",
-    "description": "Saisir le montant d'expérience à ajouter",
-    "type": 4,
-    "required": "true"
-    },
-    ]
-)
-async def addxp(ctx : SlashContext,user,xp):
-    cur=mydb.cursor()
-    query_add_xp=f"update player set XP = (SELECT XP WHERE ID_Discord='{user.id}')+{xp} where ID_Discord = {user.id}"
-    print(query_add_xp)
-    cur.execute(query_add_xp)
-    mydb.commit()
-    query_new_xp=f"SELECT XP from PLAYER where ID_Discord = {user.id}"
-    cur.execute(query_new_xp)
-    new_xp=cur.fetchall()
-    
-    variable = True
-    query_get_level = f"select level from player where ID_Discord = {user.id}"
-    while variable == True:
-        cur.execute(query_get_level)
-        level_actual=cur.fetchall()
-        if new_xp[0][0] > get_level_xp(level_actual[0][0]):
-            query_levelup= f"update player set level =(SELECT level WHERE ID_Discord='{user.id}')+1 where ID_Discord='{user.id}'"
-            cur.execute(query_levelup)
-            mydb.commit()
-        else :
-            variable=False
-    await ctx.send(f"Ajout de {xp} XP à {user}, XP Total du joueur : {new_xp[0][0]} XP. Niveau mis à jour")
-
-
-@slash.slash(guild_ids=guild_ids,name="addlevel",description="Ajout des niveaux", options=[
-{
-    "name": "user",
-    "description": "Sélectionne l'utilisateur à qui ajouter de l'expérience",
-    "type": 6,
-    "required": "true"
-    },
-    {
-    "name": "level",
-    "description": "Saisir le nombres de niveaux à ajouter",
-    "type": 4,
-    "required": "true"
-    },
-    ]
-)
-async def addlevel(ctx : SlashContext,user,level):
-    cur=mydb.cursor()
-    query_add_level=f"update player set level = {get_player_level(user.id)+level} where ID_Discord = {user.id}"
-    query_add_xp=f"update player set xp={get_level_xp(get_player_level(user.id)+level-1)} where ID_Discord = {user.id}"
-    await ctx.send(f"{user} is now level {get_player_level(user.id)+level}")
-    cur.execute(query_add_xp)
-    cur.execute(query_add_level)
-    mydb.commit()
 
 @slash.slash(name="add",description="Add something to someone", guild_ids=guild_ids, options=[
         create_option(
@@ -310,16 +266,16 @@ async def add(ctx : SlashContext,element,user,montant):
         cur.execute(query_add_level)
         mydb.commit()
 
-@slash.slash(guild_ids=guild_ids, name='balance', options=[
+@slash.slash( name='money', options=[
     create_option(
         name='user',
         required=False,
         option_type=6,
         description="Choisir l'utilisateur à qui visualiser le port-feuille",
         )
-    ]
+    ],guild_ids=guild_ids
 )
-async def balance(ctx : SlashContext,user):
+async def money(ctx : SlashContext,user= NULL):
     if user==NULL:
         embed=discord.Embed(
         title=f'Argent de {ctx.author}',
@@ -336,8 +292,10 @@ async def balance(ctx : SlashContext,user):
         )
         embed.set_footer(text="/baltop pour voir le classement d'argent")
         embed.set_author(name="Civiz Trading Bot",icon_url="https://cdn.discordapp.com/avatars/854067274892967937/31c3d848d1796a79083c1acf95475ee0.webp?size=128")
-        embed.set_thumbnail(url=ctx.author.avatar_url)
+        embed.set_thumbnail(url=user.avatar_url)
         embed.add_field(name=f"Seuil du port-monnaie : ",value=f"{get_player_money(ctx.author.id)}", inline=True)
     await ctx.send(embed=embed)
+
+
 
 client.run(token)
