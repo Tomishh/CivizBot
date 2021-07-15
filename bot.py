@@ -62,6 +62,13 @@ def get_player_money(user):
     money=cur.fetchall()
     return money[0][0]
 
+def get_classement():
+    cur=mydb.cursor()
+    query_classement = f"SELECT money,ID_discord from player ORDER BY money DESC"
+    cur.execute(query_classement)
+    player_classement=cur.fetchall()
+    return player_classement
+
 def get_level_xp(level):
     return (5*(level*level)+(50*level)+100)
 
@@ -296,6 +303,36 @@ async def money(ctx : SlashContext,user= NULL):
         embed.add_field(name=f"Seuil du port-monnaie : ",value=f"{get_player_money(ctx.author.id)}", inline=True)
     await ctx.send(embed=embed)
 
+@slash.slash(name="classement",description="Affiche le classement des gens les plus riches",guild_ids=guild_ids,options=[create_option(
+    name="page",
+    description="Aller à la page correspondante",
+    option_type=4,
+    required=False,
+)])
+async def classement(ctx : SlashContext,page=NULL):
+    if page ==NULL :
+        page = 1
+    vector=get_classement()
+    if page > (len(vector)//10+1):
+        await ctx.send(f"La page entré n'existe pas, le nombre maximal de pages est de {len(vector)//10+1}.")
+        return 0
+    classement_text=""
+    if page*10>len(vector):
+        page_max=len(vector)-(10*(page-2))
+    else :
+        page_max=page*10
+    for i in range(((10*page-10)),(page_max),1):
+        classement_text=f"{classement_text} [{i+1}] - <@{vector[i][1]}> : {vector[i][0]} ₵\n"
+    embed=discord.Embed(
+    title=f'Classement argent :',
+    colour = discord.Colour.green(),
+    )
+    file = discord.File("ranking.png")
+    embed.set_footer(text=f"Page {page} sur {len(vector)//10+1}, une page peut-être précisé pour voir le classement en précision")
+    embed.set_author(name="Civiz Trading Bot",icon_url="https://cdn.discordapp.com/avatars/854067274892967937/31c3d848d1796a79083c1acf95475ee0.webp?size=128")
+    embed.set_thumbnail(url="attachment://ranking.png")
+    embed.add_field(name=f"Classement : ",value=f"{classement_text}", inline=True)
+    await ctx.send(file = file,embed=embed)
 
 
 client.run(token)
