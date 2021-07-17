@@ -12,6 +12,9 @@ import csv
 import time
 
 
+# Import external files :
+import global_function
+
 list=[]
 
 with open('ConnectionString.csv','r') as csv_file:
@@ -34,64 +37,11 @@ slash = SlashCommand(client , sync_commands=True)
 
 guild_ids = [543518985145024522] 
 
-def get_player_level(user):
-    cur=mydb.cursor()
-    query_level = f"SELECT level from player WHERE ID_Discord='{user}'"
-    cur.execute(query_level)
-    player_level=cur.fetchall()
-    return player_level[0][0]
-
-def get_player_xp(user):
-    cur=mydb.cursor()
-    query_xp = f"SELECT XP from player WHERE ID_Discord='{user}'"
-    cur.execute(query_xp)
-    player_xp=cur.fetchall()
-    return player_xp[0][0]
-
-def get_player_last_message(user):
-    cur=mydb.cursor()
-    query_timestamp=f"select last_message from player where ID_Discord = {user}"
-    cur.execute(query_timestamp)
-    last_message=cur.fetchall()
-    return last_message[0][0]
-
-def get_player_money(user):
-    cur=mydb.cursor()
-    query_timestamp=f"select money from player where ID_Discord = {user}"
-    cur.execute(query_timestamp)
-    money=cur.fetchall()
-    return money[0][0]
-
-def get_classement():
-    cur=mydb.cursor()
-    query_classement = f"SELECT money,ID_discord from player ORDER BY money DESC"
-    cur.execute(query_classement)
-    player_classement=cur.fetchall()
-    return player_classement
-
-def get_level_xp(level):
-    return (5*(level*level)+(50*level)+100)
-
-def get_pourcentage(n,a,b):
-    value = ((n*a)/b)
-    return int(value)
-
-def progress_bar(n,a):
-    full="█"
-    empty="░"
-    string=""
-    for i in range(a-n):
-        string=f"{string}{full}"
-    for j in range(n):
-        string=f"{string}{empty}"
-    return string
-
 @client.event
 async def on_ready():
     print("Bot Ready to use")
     activity = discord.Game(name="Fais / pour effectuer des commandes", type=3)
     
-
 @client.event
 async def on_member_join(member):
     await member.send("Hello, bienvenue ma couille")
@@ -108,23 +58,21 @@ async def on_member_join(member):
         print(f"{member} added at the database")
     else :
         print(f"Member {member} Already existe inside the Database")
-        
-
 
 @client.event
 async def on_message(message):
     if not message.author.bot:
-        last_message_delay=get_player_last_message(message.author.id)+20
+        last_message_delay=global_function.get_player_last_message(message.author.id)+20
         actual_time=int(time.time())
         if last_message_delay<actual_time: #   AJOUT DE L'XP ET DE L'ARGENT
             cur=mydb.cursor()
-            query_addxp=f"update player set XP ={get_player_xp(message.author.id)+3},money='{get_player_money(message.author.id)+5}', last_message='{actual_time}' where ID_Discord='{message.author.id}'"
+            query_addxp=f"update player set XP ={global_function.get_player_xp(message.author.id)+3},money='{global_function.get_player_money(message.author.id)+5}', last_message='{actual_time}' where ID_Discord='{message.author.id}'"
             cur.execute(query_addxp)
             print(f"{message.author} XP added and last_message updated")
             mydb.commit()
-            needed_xp = (5*(get_player_level(message.author.id)**2)+(50*get_player_level(message.author.id))+100)
-            if get_player_xp(message.author.id) > needed_xp:
-                await message.channel.send(f"<@{message.author.id}> a Level-up ! Tu es passé niveau {get_player_level(message.author.id)+1}")
+            needed_xp = (5*(global_function.get_player_level(message.author.id)**2)+(50*global_function.get_player_level(message.author.id))+100)
+            if global_function.get_player_xp(message.author.id) > needed_xp:
+                await message.channel.send(f"<@{message.author.id}> a Level-up ! Tu es passé niveau {global_function.get_player_level(message.author.id)+1}")
                 query_levelup= f"update player set level =(SELECT level WHERE ID_Discord='{message.author.id}')+1 where ID_Discord='{message.author.id}'"
                 cur.execute(query_levelup)
                 mydb.commit()
@@ -132,8 +80,6 @@ async def on_message(message):
                 print(f"{message.author} level up !")
         else:
             print(f"Message sended too early by {message.author} to add XP")
-
-
 
 @slash.slash(guild_ids=guild_ids,description='ça fait prout')
 async def hi(ctx : SlashContext, guild_ids=guild_ids):
@@ -153,6 +99,7 @@ async def test2(ctx : SlashContext, guild_ids=guild_ids):
     "type": 6,
     "required": "true"
     },])
+
 async def useraddDB(ctx : SlashContext,user, guild_ids=guild_ids):
     cur=mydb.cursor()
     query_add_user=f"insert into player (ID_Discord,Money,XP,last_message,Level) VALUES ('{user.id}','0','0','0','1')"
@@ -172,10 +119,10 @@ async def useraddDB(ctx : SlashContext,user, guild_ids=guild_ids):
 )
 async def level(ctx : SlashContext,user=NULL):
     if user!=NULL:
-        level=get_player_level(user.id)
-        XP_player=get_player_xp(user.id)
-        XP_needed = get_level_xp(level)-XP_player
-        level_xp=get_level_xp(level)-get_level_xp(level-1)
+        level=global_function.get_player_level(user.id)
+        XP_player=global_function.get_player_xp(user.id)
+        XP_needed = global_function.get_level_xp(level)-XP_player
+        level_xp=global_function.get_level_xp(level)-global_function.get_level_xp(level-1)
         XP_progress = level_xp-XP_needed
         embed=discord.Embed(
             title=f'XP de {user}',
@@ -184,10 +131,10 @@ async def level(ctx : SlashContext,user=NULL):
         embed.set_thumbnail(url=user.avatar_url)
     
     if user==NULL:
-        level=get_player_level(ctx.author.id)
-        XP_player=get_player_xp(ctx.author.id)
-        XP_needed = get_level_xp(level)-XP_player
-        level_xp=get_level_xp(level)-get_level_xp(level-1)
+        level=global_function.get_player_level(ctx.author.id)
+        XP_player=global_function.get_player_xp(ctx.author.id)
+        XP_needed = global_function.get_level_xp(level)-XP_player
+        level_xp=global_function.get_level_xp(level)-global_function.get_level_xp(level-1)
         XP_progress = level_xp-XP_needed
         embed=discord.Embed(
             title=f'XP de {ctx.author}',
@@ -200,11 +147,8 @@ async def level(ctx : SlashContext,user=NULL):
 
     embed.add_field(name=f"Niveau : {level}",value=f"XP : {XP_progress}/{level_xp}", inline=True)
     embed.add_field(name="Rank : ",value='Soon...', inline=True)
-    embed.add_field(name="Progression :",value=f"{progress_bar(get_pourcentage(20,XP_needed,level_xp),20)}   {100-get_pourcentage(100,XP_needed,level_xp)}%", inline=False)
+    embed.add_field(name="Progression :",value=f"{global_function.progress_bar(global_function.get_pourcentage(20,XP_needed,level_xp),20)}   {100-global_function.get_pourcentage(100,XP_needed,level_xp)}%", inline=False)
     await ctx.send(embed=embed)
-
-
-
 
 @slash.slash(name="add",description="Add something to someone", guild_ids=guild_ids, options=[
         create_option(
@@ -258,7 +202,7 @@ async def add(ctx : SlashContext,element,user,montant):
         while variable == True:
             cur.execute(query_get_level)
             level_actual=cur.fetchall()
-            if new_xp[0][0] > get_level_xp(level_actual[0][0]):
+            if new_xp[0][0] > global_function.get_level_xp(level_actual[0][0]):
                 query_levelup= f"update player set level =(SELECT level WHERE ID_Discord='{user.id}')+1 where ID_Discord='{user.id}'"
                 cur.execute(query_levelup)
                 mydb.commit()
@@ -268,8 +212,8 @@ async def add(ctx : SlashContext,element,user,montant):
 
     if element=="Level":
         cur=mydb.cursor()
-        query_add_level=f"update player set level = {get_player_level(user.id)+montant}, xp={get_level_xp(get_player_level(user.id)+montant-1)} where ID_Discord = {user.id}"
-        await ctx.send(f"{user} is now level {get_player_level(user.id)+montant}")
+        query_add_level=f"update player set level = {global_function.get_player_level(user.id)+montant}, xp={global_function.get_level_xp(global_function.get_player_level(user.id)+montant-1)} where ID_Discord = {user.id}"
+        await ctx.send(f"{user} is now level {global_function.get_player_level(user.id)+montant}")
         cur.execute(query_add_level)
         mydb.commit()
 
@@ -291,7 +235,7 @@ async def money(ctx : SlashContext,user= NULL):
         embed.set_footer(text="/baltop pour voir le classement d'argent")
         embed.set_author(name="Civiz Trading Bot",icon_url="https://cdn.discordapp.com/avatars/854067274892967937/31c3d848d1796a79083c1acf95475ee0.webp?size=128")
         embed.set_thumbnail(url=ctx.author.avatar_url)
-        embed.add_field(name=f"Seuil du port-monnaie : ",value=f"{get_player_money(ctx.author.id)}", inline=True)
+        embed.add_field(name=f"Seuil du port-monnaie : ",value=f"{global_function.get_player_money(ctx.author.id)}", inline=True)
     else :
         embed=discord.Embed(
         title=f'Argent de {user}',
@@ -300,7 +244,7 @@ async def money(ctx : SlashContext,user= NULL):
         embed.set_footer(text="/baltop pour voir le classement d'argent")
         embed.set_author(name="Civiz Trading Bot",icon_url="https://cdn.discordapp.com/avatars/854067274892967937/31c3d848d1796a79083c1acf95475ee0.webp?size=128")
         embed.set_thumbnail(url=user.avatar_url)
-        embed.add_field(name=f"Seuil du port-monnaie : ",value=f"{get_player_money(ctx.author.id)}", inline=True)
+        embed.add_field(name=f"Seuil du port-monnaie : ",value=f"{global_function.get_player_money(ctx.author.id)}", inline=True)
     await ctx.send(embed=embed)
 
 @slash.slash(name="classement",description="Affiche le classement des gens les plus riches",guild_ids=guild_ids,options=[create_option(
@@ -312,7 +256,7 @@ async def money(ctx : SlashContext,user= NULL):
 async def classement(ctx : SlashContext,page=NULL):
     if page ==NULL :
         page = 1
-    vector=get_classement()
+    vector=global_function.get_classement()
     if page > (len(vector)//10+1):
         await ctx.send(f"La page entré n'existe pas, le nombre maximal de pages est de {len(vector)//10+1}.")
         return 0
