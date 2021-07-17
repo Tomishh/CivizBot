@@ -15,6 +15,7 @@ import time
 # Import external files :
 import global_function
 
+
 list=[]
 
 with open('ConnectionString.csv','r') as csv_file:
@@ -190,25 +191,20 @@ async def add(ctx : SlashContext,element,user,montant):
     if element=="XP":
         cur=mydb.cursor()
         query_add_xp=f"update player set XP = (SELECT XP WHERE ID_Discord='{user.id}')+{montant} where ID_Discord = {user.id}"
-        print(query_add_xp)
         cur.execute(query_add_xp)
         mydb.commit()
-        query_new_xp=f"SELECT XP from PLAYER where ID_Discord = {user.id}"
-        cur.execute(query_new_xp)
-        new_xp=cur.fetchall()
-    
-        variable = True
-        query_get_level = f"select level from player where ID_Discord = {user.id}"
-        while variable == True:
-            cur.execute(query_get_level)
-            level_actual=cur.fetchall()
-            if new_xp[0][0] > global_function.get_level_xp(level_actual[0][0]):
-                query_levelup= f"update player set level =(SELECT level WHERE ID_Discord='{user.id}')+1 where ID_Discord='{user.id}'"
-                cur.execute(query_levelup)
-                mydb.commit()
-            else :
-                variable=False
-        await ctx.send(f"Ajout de {montant} XP à {user}, XP Total du joueur : {new_xp[0][0]} XP. Niveau mis à jour")
+
+        while global_function.get_player_level(user.id) > global_function.get_level_xp(global_function.get_player_level(user.id)):
+            query_levelup= f"update player set level =(SELECT level WHERE ID_Discord='{user.id}')+1 where ID_Discord='{user.id}'"
+            cur.execute(query_levelup)
+            mydb.commit()
+        await ctx.send(f"Ajout de {montant} XP à {user}, XP Total du joueur : {global_function.get_player_xp(user.id)} XP. Niveau mis à jour")
+
+    if element=="Argent":
+        cur=mydb.cursor()
+        query_add_money=f"update player set argent ={global_function.get_player_money(user.id)+montant} where ID_Discord={user.id}"
+        cur.execute(query_add_money)
+        mydb.commit()
 
     if element=="Level":
         cur=mydb.cursor()
