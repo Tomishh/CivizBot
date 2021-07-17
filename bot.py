@@ -154,7 +154,7 @@ async def level(ctx : SlashContext,user=NULL):
 @slash.slash(name="add",description="Add something to someone", guild_ids=guild_ids, options=[
         create_option(
             name="element",
-            description="Choisir l'élément à ajouter",
+            description="Choisir l'élément à ajouter au joueur",
             option_type=3,
             required=True,
             choices=[
