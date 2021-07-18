@@ -78,6 +78,18 @@ def get_classement():
 def get_level_xp(level):
     return (5*(level*level)+(50*level)+100)
 
+def get_player_new_level(player):
+    cur=mydb.cursor()
+    query_reset_level=f"update player set level=1 where ID_Discord={player}"
+    cur.execute(query_reset_level)
+    mydb.commit()
+    while get_player_xp(player) > get_level_xp(get_player_level(player)):
+        query_new_level=f"update player set level={get_player_level(player)+1} where ID_Discord={player}"
+        cur.execute(query_new_level)
+        mydb.commit()
+        print("level added")
+    
+
 def get_pourcentage(n,a,b):
     value = ((n*a)/b)
     return int(value)
@@ -247,13 +259,7 @@ async def add(ctx : SlashContext,element,user,montant):
         query_add_xp=f"update player set XP = (SELECT XP WHERE ID_Discord='{user.id}')+{montant} where ID_Discord = {user.id}"
         cur.execute(query_add_xp)
         mydb.commit()
-        while get_player_xp(user.id) > get_level_xp(get_player_level(user.id)):
-            print("New test :")
-            print(get_player_xp(user.id))
-            print(get_level_xp(get_player_level(user.id)))
-            query_levelup= f"update player set level =(SELECT level WHERE ID_Discord='{user.id}')+1 where ID_Discord='{user.id}'"
-            cur.execute(query_levelup)
-            mydb.commit()
+        get_player_new_level(user.id)
         await ctx.send(f"Ajout de {montant} XP à {user.name}, XP Total du joueur : {get_player_xp(user.id)} XP. Niveau mis à jour")
 
     if element=="Argent":
@@ -307,21 +313,23 @@ async def add(ctx : SlashContext,element,user,montant):
     )
 ])
 async def remove(ctx : SlashContext,user,montant,element):
+    cur=mydb.cursor()
     if element=="XP":
         if get_player_xp(user.id) < montant:
-            query_xp=f"update player set XP='0' where ID_Discord={user.id}"
+            query_xp=f"update player set XP='100' where ID_Discord={user.id}"
         else :
-            query_xp=f"update player set XP={get_level_xp(user.id)-montant} where ID_Discord={user.id}"
-        cur=mydb.cursor()
+            query_xp=f"update player set XP={get_level_xp(get_player_level(user.id))-montant} where ID_Discord={user.id}"
         cur.execute(query_xp)
         mydb.commit()
-        await ctx.send(f"L'XP de {user.id} vient d'être mis à jour, son XP est désormais égal à : {get_player_xp(user.id)}")
+        if get_player_xp(user.id) < 100:
+            query_new_xp=f"update player set xp=100 where ID_discord = {user.id}"
+        get_player_new_level(user.id)
+        await ctx.send(f"L'XP de {user.name} vient d'être mis à jour, son XP est désormais égal à : {get_player_xp(user.id)}")
     if element=="Argent": 
         if get_player_money(user.id) < montant:
             query_argent=f"update player set Money='0' where ID_Discord={user.id}"
         else : 
             query_argent=f"update player set Money='{get_player_money(user.id)-montant}' where ID_Discord={user.id}"
-        cur=mydb.cursor()
         cur.execute(query_argent)
         mydb.commit()
         await ctx.send(f"L'argent de {user.name} vient d'être mis à jour, {user.name} possède maintenant {get_player_money(user.id)}₵")
@@ -330,14 +338,79 @@ async def remove(ctx : SlashContext,user,montant,element):
             query_level=f"update player set level=0 where ID_Discord = {user.id}"
         else :
             query_level=f"update player set level='{get_player_level(user.id)-montant}' where ID_Discord = {user.id}"
-        cur=mydb.cursor()
         cur.execute(query_level)
-        mydb.commit()
         query_new_xp=f"update player set xp={get_level_xp(get_player_level(user.id)-1)} where ID_Discord = {user.id}"
         cur.execute(query_new_xp)
         mydb.commit()
         await ctx.send(f"Le niveau de {user.name} vient d'être mis à jour, {user.name} est maintenant niveau {get_player_level(user.id)}")
         
+@slash.slash(name="set",description="Element à changer", guild_ids=guild_ids, options=[
+    create_option(
+        name="element",
+        description="Element à changer à l'utilsateur",
+        option_type=3,
+        required=True,
+        choices=[
+            create_choice(
+                name="XP",
+                value="XP",
+            ),
+            create_choice(
+                name="Argent",
+                value="Argent",
+            ),
+            create_choice(
+                name="Level",
+                value="Level",
+            )
+        ]
+    ),
+    create_option(
+        name="user",
+        description="Utilisateur à qui le changement va s'appliquer",
+        option_type=6,
+        required=True
+    ),
+    create_option(
+        name="montant",
+        description="Nouveau montant de l'element",
+        required=True,
+        option_type=4,
+    )
+])
+async def set(ctx : SlashContext,user,element,montant):
+    cur=mydb.cursor()
+    if element=="XP":
+        query_xp=f"update player set XP={montant} where ID_Discord={user.id}"
+        cur.execute(query_xp)
+        mydb.commit() 
+        get_player_new_level(user.id)
+        await ctx.send(f"XP et niveaux mis à jour pour {user.name}")
+    if element=="Argent":
+        query_argent=f"update player set money={montant} where ID_discord={user.id}"
+        cur.execute(query_argent)
+        mydb.commit
+        await ctx.send(f"L'argent de {user.name} vient d'être mise à jour, {user.name} possède désormait {get_player_money(user.id)}")
+    if element=="Level":
+        query_level=f"update player set level={montant},xp={get_level_xp(montant-1)} where ID_Discord={user.id}"
+        cur.execute(query_level)
+        mydb.commit()
+        await ctx.send(f"Le niveau et l'XP ont été mis à jour pour {user.name}") 
+
+@slash.slash(name="reset",description="Réinitialise le niveau du joueur",guild_ids=guild_ids,options=[
+    create_option(
+        name="user",
+        description="Utilisateur à qui la réinitialisation va s'appliquer",
+        option_type=6,
+        required=True,
+    )])
+
+async def reset(ctx : SlashContext,user):
+    cur=mydb.cursor()
+    query_reset=f"update player set XP=100,money=0,Level=1 where ID_Discord={user.id}"
+    cur.execute(query_reset)
+    mydb.commit()
+    await ctx.send(f"L'XP, le niveau ainsi que l'argent de {user.name} a été réinitialisé")
 
 @slash.slash( name='money', options=[
     create_option(
@@ -368,6 +441,7 @@ async def money(ctx : SlashContext,user= NULL):
         embed.set_thumbnail(url=user.avatar_url)
         embed.add_field(name=f"Seuil du port-monnaie : ",value=f"{get_player_money(ctx.author.id)}", inline=True)
     await ctx.send(embed=embed)
+
 
 @slash.slash(name="classement",description="Affiche le classement des gens les plus riches",guild_ids=guild_ids,options=[create_option(
     name="page",
