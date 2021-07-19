@@ -494,9 +494,15 @@ async def classement(ctx : SlashContext,page=NULL):
         option_type=3,
         required=True,
     )])
-async def title(ctx : SlashContext,Titre,Project):
-
-    await ctx.send(f"Titre: '{Titre}, Project name : '{Project}'")
+async def title(ctx : SlashContext,titre,project):
+    try:
+        os.makedirs(f"embed/{project}")
+    except:
+        print(f"{project} folder already exist. {project}_titre.txt created")
+    with open(f"embed/{project}/{project}_title.txt","w") as f:
+        f.write(titre)
+    f.close()
+    await ctx.send(f"""Titre: '{titre}', Project name : '{project}'""")
 
 # Create description
 @slash.subcommand(base="embed",name="description",description="Ajoute votre précédent message en tant que description de l'embed",guild_ids=guild_ids,options=[
@@ -517,7 +523,6 @@ async def description(ctx : SlashContext,project):
     with open(f"embed/{project}/{project}_description.txt","w") as f:
         f.write(message.content)
     f.close()
-
 #Create author
 
 #Create Footer
