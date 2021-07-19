@@ -2,6 +2,7 @@ from asyncio.windows_events import NULL
 from configparser import DEFAULTSECT
 from inspect import getfullargspec
 from os import name
+import os
 import re
 import discord
 from discord import embeds
@@ -482,32 +483,41 @@ async def classement(ctx : SlashContext,page=NULL):
 #Create embed title
 @slash.subcommand(base="embed",name="title",description="titre",guild_ids=guild_ids,options=[
     create_option(
-        name="Project",
+        name="project",
         description="Saisir le nom du projet",
         option_type=3,
         required=True,
     ),
     create_option(
-        name="Titre",
+        name="titre",
         description="Saisir le titre de l'embed à afficher",
         option_type=3,
         required=True,
     )])
 async def title(ctx : SlashContext,Titre,Project):
+
     await ctx.send(f"Titre: '{Titre}, Project name : '{Project}'")
 
 # Create description
-@slash.subcommand(base="embed",name="Ajoute votre précédent message en tant que description de l'embed",description="description",guild_ids=guild_ids,options=[
+@slash.subcommand(base="embed",name="description",description="Ajoute votre précédent message en tant que description de l'embed",guild_ids=guild_ids,options=[
     create_option(
-        name="Project",
+        name="project",
         description="Saisir le nom du projet",
         option_type=3,
         required=True,
     )
 ])
-async def description(ctx : SlashContext):
+async def description(ctx : SlashContext,project):
+    try:
+        os.makedirs(f"embed/{project}")
+    except:
+        print(f"{project} folder already exist. {project}_description.txt created")
+    message= await ctx.channel.fetch_message(ctx.channel.last_message_id)
+    await ctx.send(message.content)
+    with open(f"embed/{project}/{project}_description.txt","w") as f:
+        f.write(message.content)
+    f.close()
 
-    await ctx.send("message")
 #Create author
 
 #Create Footer
