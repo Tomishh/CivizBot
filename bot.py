@@ -7,6 +7,7 @@ import discord
 from discord import embeds
 from discord.ext import commands
 from discord.flags import Intents
+from discord.player import CREATE_NO_WINDOW
 from discord_slash import SlashCommand, SlashCommandOptionType , SlashContext
 from discord_slash.utils.manage_commands import create_option, create_choice
 import mysql.connector
@@ -157,8 +158,11 @@ async def ping(ctx : SlashContext, guild_ids=guild_ids):
     await ctx.send(f"Bot speed : {round(client.latency *1000)}ms")
 
 @slash.slash(guild_ids=guild_ids,description="Pong comme on dit")
-async def test2(ctx : SlashContext, guild_ids=guild_ids):
-    await ctx.send(f"Wsh wsh wsh <@{ctx.author_id}>")
+async def test2(ctx : SlashContext):
+    message= await ctx.channel.fetch_message(ctx.channel.last_message_id)
+    await ctx.send(message.content)
+    await ctx.send(f"Wsh wsh wsh <@{ctx.author_id}>,{ctx.channel.last_message_id}")
+
 
 @slash.slash(guild_ids=guild_ids,name="useraddDB", description="ajoute utilisateur a la bdd", options=[
 {   "name": "user",
@@ -473,6 +477,42 @@ async def classement(ctx : SlashContext,page=NULL):
     embed.set_thumbnail(url="attachment://ranking.png")
     embed.add_field(name=f"Classement : ",value=f"{classement_text}", inline=True)
     await ctx.send(file = file,embed=embed)
+
+
+#Create embed title
+@slash.subcommand(base="embed",name="title",description="titre",guild_ids=guild_ids,options=[
+    create_option(
+        name="Project",
+        description="Saisir le nom du projet",
+        option_type=3,
+        required=True,
+    ),
+    create_option(
+        name="Titre",
+        description="Saisir le titre de l'embed à afficher",
+        option_type=3,
+        required=True,
+    )])
+async def title(ctx : SlashContext,Titre,Project):
+    await ctx.send(f"Titre: '{Titre}, Project name : '{Project}'")
+
+# Create description
+@slash.subcommand(base="embed",name="Ajoute votre précédent message en tant que description de l'embed",description="description",guild_ids=guild_ids,options=[
+    create_option(
+        name="Project",
+        description="Saisir le nom du projet",
+        option_type=3,
+        required=True,
+    )
+])
+async def description(ctx : SlashContext):
+
+    await ctx.send("message")
+#Create author
+
+#Create Footer
+
+#Create thumbnail
 
 
 client.run(token)
