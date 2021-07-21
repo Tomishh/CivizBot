@@ -90,7 +90,6 @@ def get_player_new_level(player):
         cur.execute(query_new_level)
         mydb.commit()
         print("level added")
-    
 
 def get_pourcentage(n,a,b):
     value = ((n*a)/b)
@@ -105,6 +104,14 @@ def progress_bar(n,a):
     for j in range(n):
         string=f"{string}{empty}"
     return string
+
+HEX_COLOR_REGEX = r'^([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$'
+
+def is_hex_color(input_string):
+    regexp = re.compile(HEX_COLOR_REGEX)
+    if regexp.search(input_string):
+        return True
+    return False
 
 @client.event
 async def on_ready():
@@ -479,8 +486,6 @@ async def classement(ctx : SlashContext,page=NULL):
     embed.add_field(name=f"Classement : ",value=f"{classement_text}", inline=True)
     await ctx.send(file = file,embed=embed)
 
-
-#Create embed title
 @slash.subcommand(base="embed",name="title",description="titre",guild_ids=guild_ids,options=[
     create_option(
         name="project",
@@ -504,7 +509,6 @@ async def title(ctx : SlashContext,titre,project):
     f.close()
     await ctx.send(f"""Titre: '{titre}', Project name : '{project}'""")
 
-# Create description
 @slash.subcommand(base="embed",name="description",description="Ajoute votre précédent message en tant que description de l'embed",guild_ids=guild_ids,options=[
     create_option(
         name="project",
@@ -523,6 +527,99 @@ async def description(ctx : SlashContext,project):
     with open(f"embed/{project}/{project}_description.txt","w") as f:
         f.write(message.content)
     f.close()
+
+@slash.subcommand(base="embed",name="section",description="Ajoute votre précédent message en tant que section dans l'embed",guild_ids=guild_ids,options=[
+    create_option(
+        name="project",
+        description="Nom du projet",
+        required=True,
+        option_type=3
+    ),
+    create_option(
+        name="numero",
+        description="Numero de la section",
+        required=True,
+        option_type=4,
+    ),
+    create_option(
+        name="titre",
+        description="Titre de la section",
+        required=True,
+        option_type=3,
+    )])
+
+async def section(ctx : SlashContext,project,numero,titre):
+    try:
+        os.makedirs(f"embed/{project}")
+    except:
+        print(f"{project} folder already exist. {project}_description.txt created")
+    message= await ctx.channel.fetch_message(ctx.channel.last_message_id)
+    with open(f"embed/{project}/{project}_section_message_{numero}.txt","w") as f:
+        f.write(message.content)
+    f.close()
+    with open(f"embed/{project}/{project}_section_titre_{numero}.txt","w") as f:
+        f.write(titre)
+    f.close()
+    await ctx.send(f"La section numero {numero} du projet '{project}' a été créée ")
+
+
+@slash.subcommand(base="embed",name="post",description="Publie l'embed",guild_ids=guild_ids,options=[
+    create_option(
+        name="project",
+        description="Nom du projet",
+        required=True,
+        option_type=3
+    ),
+    create_option(
+        name="color",
+        description="Couleur de la barre latérale de l'embed (en hexadécimal)",
+        required=True,
+        option_type=3
+    ),
+    create_option(
+        name="channel",
+        description="Choisir le canal textuel dans lequel l'embed doit-être envoyé",
+        required=True,
+        option_type=7,
+    )])
+async def post(ctx : SlashContext, project, color,channel):
+    readableHex = int(hex(int(color.replace("#", ""), 16)), 0)
+    if os.path.isfile(f"embed/{project}/{project}_title.txt")==False:
+        await ctx.send(f"Aucun titre pour l'embed")
+        return 0
+    if os.path.isfile(f"embed/{project}/{project}_description.txt")==False:
+        with open(f"embed/{project}/{project}_title.txt", 'r') as file:
+            data = file.read()
+        embed=discord.Embed(
+        title=data,
+        colour = readableHex
+        )
+
+    if os.path.isfile(f"embed/{project}/{project}_description.txt")==True:
+        with open(f"embed/{project}/{project}_title.txt", 'r') as file:
+            data_title = file.read()
+        with open(f"embed/{project}/{project}_description.txt", 'r') as file:
+            data = file.readlines()
+            data_description=""
+            for line in data:
+                data_description =data_description+line
+        embed=discord.Embed(
+        title=data_title,
+        description=data_description,
+        colour = readableHex
+        )
+    for i in range(1,25):
+        if os.path.isfile(f"embed/{project}/{project}_section_message_{i}.txt")==True and os.path.isfile(f"embed/{project}/{project}_section_titre_{i}.txt")==True:
+            with open(f"embed/{project}/{project}_section_titre_{i}.txt", 'r') as file:
+                data_section_title = file.read()
+            with open(f"embed/{project}/{project}_section_message_{i}.txt", 'r') as file:
+                data = file.readlines()
+                data_section_description=""
+                for line in data:
+                    data_section_description =data_section_description+line
+            embed=embed.add_field(name=data_section_title,value=data_section_description)
+    await channel.send(embed=embed)
+    await ctx.send(f"Embed envoyé dans <#{channel.id}>")
 #Create author
 
 #Create Footer
