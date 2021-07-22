@@ -12,8 +12,7 @@ from discord.flags import Intents
 from discord.player import CREATE_NO_WINDOW
 from discord_slash import SlashCommand, SlashCommandOptionType , SlashContext
 from discord_slash.utils.manage_commands import create_option, create_choice
-from discord_slash.utils.manage_components import create_button, create_actionrow
-from discord_slash.utils.manage_components import wait_for_component
+from discord_slash.utils.manage_components import create_button, create_actionrow, create_select, create_select_option,wait_for_component
 
 from discord_slash.model import ButtonStyle
 import mysql.connector
@@ -46,6 +45,10 @@ client = commands.Bot(command_prefix='!',intents=intents)
 slash = SlashCommand(client , sync_commands=True)
 
 guild_ids = [543518985145024522] 
+
+class Slash(commands.Cog):
+    def __init__(self, bot):
+        self.bot = bot
 
 def get_player_level(user):
     cur=mydb.cursor()
@@ -631,8 +634,17 @@ action_row = create_actionrow(*buttons)
 
 @slash.slash(name="bouton",description="test bouton",guild_ids=guild_ids)
 async def bouton(ctx:SlashContext):
-    await ctx.send("My Message", components=[action_row])
-    button_ctx = await ctx.wait_for(components=action_row, check=lambda i: i.components.label.startswitch("Click"))
+    # await ctx.send("My Message", components=[action_row])
+    # note: this will only catch one button press, if you want more, put this in a loop
+    button_ctx: ComponentContext = await wait_for_component(client, components=action_row)
+    embed=discord.Embed(
+    title=f'Classement argent :',
+    colour = discord.Colour.green(),
+    )
+    embed.add_field(name="bouton",value=[action_row])
+    button_ctx: ComponentContext = await wait_for_component(client, components=action_row)
     await button_ctx.edit_origin(content="You pressed a button!")
+    await ctx.send(embed=embed)
+
 
 client.run(token)
