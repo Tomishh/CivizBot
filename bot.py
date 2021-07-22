@@ -7,10 +7,15 @@ import re
 import discord
 from discord import embeds
 from discord.ext import commands
+from discord.ext.commands.core import check
 from discord.flags import Intents
 from discord.player import CREATE_NO_WINDOW
 from discord_slash import SlashCommand, SlashCommandOptionType , SlashContext
 from discord_slash.utils.manage_commands import create_option, create_choice
+from discord_slash.utils.manage_components import create_button, create_actionrow
+from discord_slash.utils.manage_components import wait_for_component
+
+from discord_slash.model import ButtonStyle
 import mysql.connector
 import csv
 import time
@@ -517,6 +522,7 @@ async def title(ctx : SlashContext,titre,project):
         required=True,
     )
 ])
+
 async def description(ctx : SlashContext,project):
     try:
         os.makedirs(f"embed/{project}")
@@ -561,7 +567,6 @@ async def section(ctx : SlashContext,project,numero,titre):
         f.write(titre)
     f.close()
     await ctx.send(f"La section numero {numero} du projet '{project}' a été créée ")
-
 
 @slash.subcommand(base="embed",name="post",description="Publie l'embed",guild_ids=guild_ids,options=[
     create_option(
@@ -620,11 +625,14 @@ async def post(ctx : SlashContext, project, color,channel):
             embed=embed.add_field(name=data_section_title,value=data_section_description)
     await channel.send(embed=embed)
     await ctx.send(f"Embed envoyé dans <#{channel.id}>")
-#Create author
 
-#Create Footer
+buttons = [create_button(style=ButtonStyle.green,label="A Green Button"),]
+action_row = create_actionrow(*buttons)
 
-#Create thumbnail
-
+@slash.slash(name="bouton",description="test bouton",guild_ids=guild_ids)
+async def bouton(ctx:SlashContext):
+    await ctx.send("My Message", components=[action_row])
+    button_ctx = await ctx.wait_for(components=action_row, check=lambda i: i.components.label.startswitch("Click"))
+    await button_ctx.edit_origin(content="You pressed a button!")
 
 client.run(token)
