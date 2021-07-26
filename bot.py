@@ -658,8 +658,15 @@ async def bouton(ctx:SlashContext):
     # await ctx.send("My Message", components=[action_row])
     # note: this will only catch one button press, if you want more, put this in a loop
     # button_ctx: ComponentContext = await wait_for_component(client, components=action_row)
-    await ctx.send(components=[create_actionrow(
+    await ctx.send(".",components=[create_actionrow(
         create_select(options=create_folder_options("embed/"),
+        placeholder="Choisi un projet",
+        min_values=1,
+        max_values=1),
+        create_select(options=[
+            create_select_option("Vert",value="vert",emoji='Green Square'),
+            create_select_option("Bleu",value="bleu",emoji='Blue Square'),
+        ],
         placeholder="Choisi un projet",
         min_values=1,
         max_values=1))])
