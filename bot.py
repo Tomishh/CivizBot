@@ -121,6 +121,22 @@ def is_hex_color(input_string):
         return True
     return False
 
+def create_folder_options(path_choice):
+    directory_list = []
+    for root, dirs, files in os.walk(f"{path_choice}", topdown=False):
+        for name in dirs:
+            directory_list.append(os.path.join(root, name))
+
+    new_directory_list= []
+    for i in range(len(directory_list)):
+        new_directory_list.append(directory_list[i].replace(f"{path_choice}","")),
+    return_list= []
+    for i in range(len(new_directory_list)):
+        return_list.append(create_select_option(f"{new_directory_list[i]}", value=f"{new_directory_list[i]}"))
+        print(f"droplist {new_directory_list[i]}crée")
+    return return_list
+
+
 @client.event
 async def on_ready():
     print("Bot Ready to use")
@@ -629,22 +645,32 @@ async def post(ctx : SlashContext, project, color,channel):
     await channel.send(embed=embed)
     await ctx.send(f"Embed envoyé dans <#{channel.id}>")
 
-buttons = [create_button(style=ButtonStyle.green,label="A Green Button"),]
-action_row = create_actionrow(*buttons)
+# buttons = [create_button(style=ButtonStyle.green,label="A Green Button"),]
+# action_row = create_actionrow(*buttons)
+# select=create_select(options=[create_folder_options("embed/")],
+#     placeholder="Choisi un projet",
+#     min_values=1,
+#     max_values=1)
+
 
 @slash.slash(name="bouton",description="test bouton",guild_ids=guild_ids)
 async def bouton(ctx:SlashContext):
     # await ctx.send("My Message", components=[action_row])
     # note: this will only catch one button press, if you want more, put this in a loop
-    button_ctx: ComponentContext = await wait_for_component(client, components=action_row)
-    embed=discord.Embed(
-    title=f'Classement argent :',
-    colour = discord.Colour.green(),
-    )
-    embed.add_field(name="bouton",value=[action_row])
-    button_ctx: ComponentContext = await wait_for_component(client, components=action_row)
-    await button_ctx.edit_origin(content="You pressed a button!")
-    await ctx.send(embed=embed)
+    # button_ctx: ComponentContext = await wait_for_component(client, components=action_row)
+    await ctx.send(components=[create_actionrow(
+        create_select(options=create_folder_options("embed/"),
+        placeholder="Choisi un projet",
+        min_values=1,
+        max_values=1))])
+    # embed=discord.Embed(
+    # title=f'Classement argent :',
+    # colour = discord.Colour.green(),
+    # )
+    # embed.add_field(name="bouton",value=[action_row])
+    # button_ctx: ComponentContext = await wait_for_component(client, components=action_row)
+    # await button_ctx.edit_origin(content="You pressed a button!")
+    # await ctx.send(embed=embed)
 
 
 client.run(token)
