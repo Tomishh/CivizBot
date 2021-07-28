@@ -19,11 +19,6 @@ import mysql.connector
 import csv
 import time
 
-
-# Import external files :
-import global_function
-
-
 list=[]
 
 with open('ConnectionString.csv','r') as csv_file:
@@ -113,9 +108,8 @@ def progress_bar(n,a):
         string=f"{string}{empty}"
     return string
 
-HEX_COLOR_REGEX = r'^([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$'
-
 def is_hex_color(input_string):
+    HEX_COLOR_REGEX = r'^([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$'
     regexp = re.compile(HEX_COLOR_REGEX)
     if regexp.search(input_string):
         return True
@@ -136,6 +130,55 @@ def create_folder_options(path_choice):
         print(f"droplist {new_directory_list[i]}crée")
     return return_list
 
+def create_commands_choice(path_choice):
+    directory_list = []
+    for root, dirs, files in os.walk(f"{path_choice}", topdown=False):
+        for name in dirs:
+            directory_list.append(os.path.join(root, name))
+
+    new_directory_list= []
+    for i in range(len(directory_list)):
+        new_directory_list.append(directory_list[i].replace(f"{path_choice}","")),
+    return_list= []
+    for i in range(len(new_directory_list)):
+        return_list.append(create_choice(name=f"{new_directory_list[i]}",value=f"{new_directory_list[i]}"))
+        print(f"choice {new_directory_list[i]} crée")
+    return return_list
+
+def post_embed(ctx, project):
+    if os.path.isfile(f"embed/{project}/{project}_title.txt")==False:
+        ctx.send(f"Aucun titre pour l'embed")
+        return 0
+    if os.path.isfile(f"embed/{project}/{project}_description.txt")==False:
+        with open(f"embed/{project}/{project}_title.txt", 'r') as file:
+            data = file.read()
+        embed=discord.Embed(
+        title=data,
+        )
+
+    if os.path.isfile(f"embed/{project}/{project}_description.txt")==True:
+        with open(f"embed/{project}/{project}_title.txt", 'r') as file:
+            data_title = file.read()
+        with open(f"embed/{project}/{project}_description.txt", 'r') as file:
+            data = file.readlines()
+            data_description=""
+            for line in data:
+                data_description =data_description+line
+        embed=discord.Embed(
+        title=data_title,
+        description=data_description,
+        )
+    for i in range(1,25):
+        if os.path.isfile(f"embed/{project}/{project}_section_message_{i}.txt")==True and os.path.isfile(f"embed/{project}/{project}_section_titre_{i}.txt")==True:
+            with open(f"embed/{project}/{project}_section_titre_{i}.txt", 'r') as file:
+                data_section_title = file.read()
+            with open(f"embed/{project}/{project}_section_message_{i}.txt", 'r') as file:
+                data = file.readlines()
+                data_section_description=""
+                for line in data:
+                    data_section_description =data_section_description+line
+            embed=embed.add_field(name=data_section_title,value=data_section_description)
+    return embed
 
 @client.event
 async def on_ready():
@@ -196,8 +239,8 @@ async def test2(ctx : SlashContext):
     await ctx.send(f"Wsh wsh wsh <@{ctx.author_id}>,{ctx.channel.last_message_id}")
 
 
-@slash.slash(guild_ids=guild_ids,name="useraddDB", description="ajoute utilisateur a la bdd", options=[
-{   "name": "user",
+@slash.slash(guild_ids=guild_ids,name="useraddDB", description="ajoute utilisateur a la bdd", options=[{
+    "name": "user",
     "description": "Sélectionne l'utilisateur à ajouter à la BDD",
     "type": 6,
     "required": "true"
@@ -217,9 +260,8 @@ async def useraddDB(ctx : SlashContext,user, guild_ids=guild_ids):
         description="Voir le niveau d'un utilisateur",
         option_type=6,
         required=False,
-        )
-    ]
-)
+        )])
+
 async def level(ctx : SlashContext,user=NULL):
     if user!=NULL:
         level=get_player_level(user.id)
@@ -285,9 +327,7 @@ async def level(ctx : SlashContext,user=NULL):
             description="Choisir le montant à ajouter",
             option_type=4,
             required=True,
-        )
-    ]
-)
+        )])
 async def add(ctx : SlashContext,element,user,montant):
     print(element)
     if element=="XP":
@@ -346,8 +386,7 @@ async def add(ctx : SlashContext,element,user,montant):
         description="Montant du retrait",
         required=True,
         option_type=4,
-    )
-])
+    )])
 async def remove(ctx : SlashContext,user,montant,element):
     cur=mydb.cursor()
     if element=="XP":
@@ -412,8 +451,7 @@ async def remove(ctx : SlashContext,user,montant,element):
         description="Nouveau montant de l'element",
         required=True,
         option_type=4,
-    )
-])
+    )])
 async def set(ctx : SlashContext,user,element,montant):
     cur=mydb.cursor()
     if element=="XP":
@@ -455,8 +493,7 @@ async def reset(ctx : SlashContext,user):
         option_type=6,
         description="Choisir l'utilisateur à qui visualiser le port-feuille",
         )
-    ],guild_ids=guild_ids
-)
+    ],guild_ids=guild_ids)
 async def money(ctx : SlashContext,user= NULL):
     if user==NULL:
         embed=discord.Embed(
@@ -478,13 +515,12 @@ async def money(ctx : SlashContext,user= NULL):
         embed.add_field(name=f"Seuil du port-monnaie : ",value=f"{get_player_money(ctx.author.id)}", inline=True)
     await ctx.send(embed=embed)
 
-
 @slash.slash(name="classement",description="Affiche le classement des gens les plus riches",guild_ids=guild_ids,options=[create_option(
     name="page",
     description="Aller à la page correspondante",
     option_type=4,
-    required=False,
-)])
+    required=False
+    )])
 async def classement(ctx : SlashContext,page=NULL):
     if page ==NULL :
         page = 1
@@ -510,6 +546,25 @@ async def classement(ctx : SlashContext,page=NULL):
     embed.add_field(name=f"Classement : ",value=f"{classement_text}", inline=True)
     await ctx.send(file = file,embed=embed)
 
+@slash.subcommand(base="embed",name="create",description="ajoute un nom de projet",guild_ids=guild_ids,options=[
+    create_option(
+        name="project",
+        description="Nom du projet",
+        required=True,
+        option_type=3
+    )])
+async def create(ctx : SlashContext, project):
+    try:
+        os.makedirs(f"embed/{project}")
+    except:
+        await ctx.send(f"Le projet avec le nom '{project}' existe déjà.")
+    with open(f"embed/{project}//{project}_created.txt","w") as f:
+        f.write("created.")
+    f.close()
+
+    await ctx.send("done.")
+
+
 @slash.subcommand(base="embed",name="title",description="titre",guild_ids=guild_ids,options=[
     create_option(
         name="project",
@@ -524,14 +579,13 @@ async def classement(ctx : SlashContext,page=NULL):
         required=True,
     )])
 async def title(ctx : SlashContext,titre,project):
-    try:
-        os.makedirs(f"embed/{project}")
-    except:
-        print(f"{project} folder already exist. {project}_titre.txt created")
+    if os.path.isfile(f"embed/{project}/{project}_created.txt")==False:
+        await ctx.send(f"Le projet '{project}' n'existe pas ")
+        return 0
     with open(f"embed/{project}/{project}_title.txt","w") as f:
         f.write(titre)
     f.close()
-    await ctx.send(f"""Titre: '{titre}', Project name : '{project}'""")
+    await ctx.send(embed=post_embed(ctx,project))
 
 @slash.subcommand(base="embed",name="description",description="Ajoute votre précédent message en tant que description de l'embed",guild_ids=guild_ids,options=[
     create_option(
@@ -539,19 +593,16 @@ async def title(ctx : SlashContext,titre,project):
         description="Saisir le nom du projet",
         option_type=3,
         required=True,
-    )
-])
-
+    )])
 async def description(ctx : SlashContext,project):
-    try:
-        os.makedirs(f"embed/{project}")
-    except:
-        print(f"{project} folder already exist. {project}_description.txt created")
+    if os.path.isfile(f"embed/{project}/{project}_created.txt")==False:
+        await ctx.send(f"Le projet '{project}' n'existe pas ")
+        return 0
     message= await ctx.channel.fetch_message(ctx.channel.last_message_id)
-    await ctx.send(message.content)
     with open(f"embed/{project}/{project}_description.txt","w") as f:
         f.write(message.content)
     f.close()
+    await ctx.send(embed=post_embed(ctx,project))
 
 @slash.subcommand(base="embed",name="section",description="Ajoute votre précédent message en tant que section dans l'embed",guild_ids=guild_ids,options=[
     create_option(
@@ -572,12 +623,10 @@ async def description(ctx : SlashContext,project):
         required=True,
         option_type=3,
     )])
-
 async def section(ctx : SlashContext,project,numero,titre):
-    try:
-        os.makedirs(f"embed/{project}")
-    except:
-        print(f"{project} folder already exist. {project}_description.txt created")
+    if os.path.isfile(f"embed/{project}/{project}_created.txt")==False:
+        await ctx.send(f"Le projet '{project}' n'existe pas ")
+        return 0
     message= await ctx.channel.fetch_message(ctx.channel.last_message_id)
     with open(f"embed/{project}/{project}_section_message_{numero}.txt","w") as f:
         f.write(message.content)
@@ -585,7 +634,7 @@ async def section(ctx : SlashContext,project,numero,titre):
     with open(f"embed/{project}/{project}_section_titre_{numero}.txt","w") as f:
         f.write(titre)
     f.close()
-    await ctx.send(f"La section numero {numero} du projet '{project}' a été créée ")
+    await ctx.send(f"La section numero {numero} du projet '{project}' a été créée :",embed=post_embed(ctx,project))
 
 @slash.subcommand(base="embed",name="post",description="Publie l'embed",guild_ids=guild_ids,options=[
     create_option(
@@ -595,89 +644,34 @@ async def section(ctx : SlashContext,project,numero,titre):
         option_type=3
     ),
     create_option(
-        name="color",
-        description="Couleur de la barre latérale de l'embed (en hexadécimal)",
-        required=True,
-        option_type=3
-    ),
-    create_option(
         name="channel",
         description="Choisir le canal textuel dans lequel l'embed doit-être envoyé",
         required=True,
         option_type=7,
     )])
-async def post(ctx : SlashContext, project, color,channel):
-    readableHex = int(hex(int(color.replace("#", ""), 16)), 0)
-    if os.path.isfile(f"embed/{project}/{project}_title.txt")==False:
-        await ctx.send(f"Aucun titre pour l'embed")
-        return 0
-    if os.path.isfile(f"embed/{project}/{project}_description.txt")==False:
-        with open(f"embed/{project}/{project}_title.txt", 'r') as file:
-            data = file.read()
-        embed=discord.Embed(
-        title=data,
-        colour = readableHex
-        )
-
-    if os.path.isfile(f"embed/{project}/{project}_description.txt")==True:
-        with open(f"embed/{project}/{project}_title.txt", 'r') as file:
-            data_title = file.read()
-        with open(f"embed/{project}/{project}_description.txt", 'r') as file:
-            data = file.readlines()
-            data_description=""
-            for line in data:
-                data_description =data_description+line
-        embed=discord.Embed(
-        title=data_title,
-        description=data_description,
-        colour = readableHex
-        )
-    for i in range(1,25):
-        if os.path.isfile(f"embed/{project}/{project}_section_message_{i}.txt")==True and os.path.isfile(f"embed/{project}/{project}_section_titre_{i}.txt")==True:
-            with open(f"embed/{project}/{project}_section_titre_{i}.txt", 'r') as file:
-                data_section_title = file.read()
-            with open(f"embed/{project}/{project}_section_message_{i}.txt", 'r') as file:
-                data = file.readlines()
-                data_section_description=""
-                for line in data:
-                    data_section_description =data_section_description+line
-            embed=embed.add_field(name=data_section_title,value=data_section_description)
-    await channel.send(embed=embed)
+async def post(ctx : SlashContext, project,channel):
+    await channel.send(embed=post_embed(ctx, project))
     await ctx.send(f"Embed envoyé dans <#{channel.id}>")
-
-# buttons = [create_button(style=ButtonStyle.green,label="A Green Button"),]
-# action_row = create_actionrow(*buttons)
-# select=create_select(options=[create_folder_options("embed/")],
-#     placeholder="Choisi un projet",
-#     min_values=1,
-#     max_values=1)
-
 
 @slash.slash(name="bouton",description="test bouton",guild_ids=guild_ids)
 async def bouton(ctx:SlashContext):
-    # await ctx.send("My Message", components=[action_row])
-    # note: this will only catch one button press, if you want more, put this in a loop
-    # button_ctx: ComponentContext = await wait_for_component(client, components=action_row)
+
     await ctx.send(".",components=[create_actionrow(
-        create_select(options=create_folder_options("embed/"),
-        placeholder="Choisi un projet",
-        min_values=1,
-        max_values=1),
         create_select(options=[
-            create_select_option("Vert",value="vert",emoji='Green Square'),
-            create_select_option("Bleu",value="bleu",emoji='Blue Square'),
+            create_select_option("Vert",value="#77B058",emoji='🟩'),
+            create_select_option("Bleu",value="#53A9E9",emoji='🟦'),
+            create_select_option("Violet",value="#AA8ED6",emoji='🟪'),
+            create_select_option("Marron",value="#C1694F",emoji='🟫'),
+            create_select_option("Rouge",value="#DB2E43",emoji='🟥'),
+            create_select_option("Orance",value="#F4900C",emoji='🟧'),
+            create_select_option("Jaune",value="#FDCB58",emoji='🟨'),
+            create_select_option("Noir",value="#31373D",emoji='⬛'),
+            create_select_option("Blanc",value="#E5E6E7",emoji='⬜'),
         ],
         placeholder="Choisi un projet",
         min_values=1,
         max_values=1))])
-    # embed=discord.Embed(
-    # title=f'Classement argent :',
-    # colour = discord.Colour.green(),
-    # )
-    # embed.add_field(name="bouton",value=[action_row])
-    # button_ctx: ComponentContext = await wait_for_component(client, components=action_row)
-    # await button_ctx.edit_origin(content="You pressed a button!")
-    # await ctx.send(embed=embed)
-
+   
 
 client.run(token)
+1
